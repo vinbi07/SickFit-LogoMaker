@@ -94,6 +94,7 @@ export function TextControls({
               handleFontSizeChange(Number(event.target.value))
             }
           />
+          <p className={styles.inputHint}>Smallest size is 8 and maximum is 240.</p>
         </div>
 
         <div className={styles.controlGroup}>

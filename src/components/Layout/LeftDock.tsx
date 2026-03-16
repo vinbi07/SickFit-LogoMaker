@@ -25,7 +25,12 @@ const tools: { key: EditorToolKey; label: string; shortLabel: string }[] = [
 export function LeftDock({ activeTool, onSelectTool }: LeftDockProps) {
   return (
     <nav className={styles.dock} aria-label="Design tools">
-      <div className={styles.brand}>SF</div>
+      <div className={styles.brand}>
+        <img
+          src="https://cdn.shopify.com/s/files/1/0582/5324/6628/files/SickFit_-_RED.png?v=1736220882"
+          alt="SickFit"
+        />
+      </div>
       {tools.map((tool) => {
         const isActive = tool.key === activeTool;
         return (

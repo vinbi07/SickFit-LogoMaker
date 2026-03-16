@@ -33,11 +33,11 @@ type CanvasWorkspaceProps = {
 export function CanvasWorkspace({
   canvasRef,
   zoomPercent,
-  debugInfo,
 }: CanvasWorkspaceProps) {
   return (
     <section className={styles.workspace}>
       <div className={styles.stage}>
+        {/*
         <aside className={styles.debugOverlay} aria-live="polite">
           <strong>Canvas Debug</strong>
           <div className={styles.debugGrid}>
@@ -81,6 +81,7 @@ export function CanvasWorkspace({
             </span>
           </div>
         </aside>
+        */}
         <SockCanvas canvasRef={canvasRef} />
       </div>
       <div className={styles.workspaceMeta}>

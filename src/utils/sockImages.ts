@@ -5,10 +5,10 @@ export const sockImages: Record<SockColorKey, { right: string }> = {
     right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/SickFit136.jpg?v=1743533735',
   },
   black: {
-    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/BlackSocks.png?v=1758901535',
+    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/BlackSock.png?v=1773690975',
   },
   red: {
-    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/RedSocks.png?v=1758902046',
+    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/RedSock.png?v=1773691325',
   },
   creme: {
     right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/Creme_-_Copy.png?v=1750702945',
@@ -17,10 +17,10 @@ export const sockImages: Record<SockColorKey, { right: string }> = {
     right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/Pink_Socks.png?v=1755017673',
   },
   blue: {
-    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/Blue_Socks.png?v=1756078045',
+    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/BlueSock.png?v=1773691121',
   },
   gray: {
-    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/GraySocks.png?v=1756078508',
+    right: 'https://cdn.shopify.com/s/files/1/0582/5324/6628/files/GraySock.png?v=1773691455',
   },
 };
 
