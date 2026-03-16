@@ -1,0 +1,85 @@
+.section {
+  margin-bottom: 1rem;
+}
+
+.section h2 {
+  font-family: var(--font-heading);
+  font-weight: bold;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  margin-top: 0;
+}
+
+.card {
+  font-family: var(--font-body);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
+  padding: 1rem;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.textInput,
+.card select {
+  padding: 12px;
+  font-family: var(--font-body);
+  font-size: 1rem;
+  width: 100%;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+}
+
+.addTextButton {
+  background-color: #fff;
+  color: #333;
+  width: 100%;
+  padding: 0.85rem;
+  margin-top: 1rem;
+  font-family: var(--font-body);
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.controlGroup {
+  margin-top: 1rem;
+}
+
+.controlGroup label {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--font-heading);
+  font-weight: 600;
+}
+
+.colorPicker {
+  width: 100%;
+  height: 50px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+.optionRow {
+  display: flex;
+  margin-top: 1rem;
+  justify-content: center;
+  gap: 8px;
+}
+
+.optionRow button {
+  font-family: var(--font-body);
+  background: #fff;
+  color: #111;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.activeOption {
+  background: #111 !important;
+  color: #fff !important;
+}

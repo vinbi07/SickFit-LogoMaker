@@ -1,0 +1,91 @@
+.section {
+  margin-bottom: 1rem;
+}
+
+.section h2 {
+  font-family: var(--font-heading);
+  font-weight: bold;
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+  margin-top: 0;
+  padding-left: 0;
+}
+
+.colorPicker {
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
+  padding: 10px;
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.colorCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 3px solid #ccc;
+  cursor: pointer;
+}
+
+.activeCircle {
+  border: 3px solid #333;
+}
+
+.selectedColorName {
+  margin-top: 10px;
+  font-weight: bold;
+  font-family: var(--font-body);
+}
+
+.uploadInput {
+  font-family: var(--font-body);
+  background: var(--color-panel);
+  box-shadow: var(--shadow-panel);
+  padding: 1rem;
+  font-size: 1.125rem;
+  width: 100%;
+  border-radius: 8px;
+}
+
+.uploadDropzone {
+  border: 2px dashed #c9c9c9;
+  border-radius: 10px;
+  background: #fafafa;
+  padding: 12px;
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.dropzoneActive {
+  border-color: #111;
+  background: #f3f3f3;
+}
+
+.dropzoneHint {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.dropzoneHintSecondary {
+  margin: 0.25rem 0 0.75rem;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  color: var(--color-muted);
+}
+
+.uploadInput::-webkit-file-upload-button {
+  background-color: #fff;
+  color: #333;
+  padding: 8px 16px;
+  border: none;
+  border-radius: 10px;
+  font-size: 1rem;
+  font-weight: bold;
+  box-shadow: var(--shadow-panel);
+  margin-right: 1rem;
+  cursor: pointer;
+}

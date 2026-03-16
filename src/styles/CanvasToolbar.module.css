@@ -1,0 +1,51 @@
+.toolbar {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  width: 100%;
+}
+
+.toolbar button,
+.downloadButton {
+  padding: 12px 20px;
+  font-size: 16px;
+  font-weight: 600;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease;
+  font-family: var(--font-body);
+}
+
+.toolbar button {
+  background: #f3f3f3;
+  color: #111;
+}
+
+.toolbar button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deleteButton {
+  background: var(--color-danger) !important;
+  color: #fff !important;
+}
+
+.downloadButton {
+  background: #111;
+  color: #fff;
+  max-width: 720px;
+  width: 100%;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+.downloadButton:hover {
+  background: #333;
+}
+
+.downloadButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
