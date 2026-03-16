@@ -1,5 +1,6 @@
 import { buildPrompt } from './promptBuilder';
 import type { AIGenerationRequest, AIGenerationVariant } from '../types/jobs';
+import { logger } from '../utils/logger';
 
 type GeminiImageResult = {
   mimeType: string;
@@ -31,8 +32,8 @@ export async function generateMockupImage(
   variant: AIGenerationVariant,
   apiKey: string,
 ): Promise<GeminiImageResult> {
-  const model =
-    process.env.GEMINI_MODEL ?? 'gemini-2.0-flash-preview-image-generation';
+  const model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  const startedAt = Date.now();
 
   const prompt = buildPrompt(variant);
   const parts: Array<Record<string, unknown>> = [{ text: prompt }];
@@ -51,6 +52,15 @@ export async function generateMockupImage(
       });
     }
   }
+
+  logger.info('gemini.request.start', {
+    variant,
+    model,
+    hasTexturePng: Boolean(payload.texturePng),
+    texturePngLength: payload.texturePng?.length ?? 0,
+    promptLength: prompt.length,
+    timeoutMs: GENERATION_TIMEOUT_MS,
+  });
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), GENERATION_TIMEOUT_MS);
@@ -73,13 +83,33 @@ export async function generateMockupImage(
       },
     );
 
+    logger.info('gemini.request.response', {
+      variant,
+      model,
+      status: response.status,
+      ok: response.ok,
+      durationMs: Date.now() - startedAt,
+    });
+
     if (!response.ok) {
       const body = await response.text();
+      logger.error('gemini.request.non_200', {
+        variant,
+        model,
+        status: response.status,
+        responseBody: body.slice(0, 1500),
+      });
       throw new Error(`Gemini API error ${response.status}: ${body}`);
     }
 
     const parsed = (await response.json()) as GeminiResponse;
     if (parsed.error) {
+      logger.error('gemini.request.error_payload', {
+        variant,
+        model,
+        code: parsed.error.code ?? null,
+        message: parsed.error.message ?? null,
+      });
       throw new Error(
         `Gemini error ${parsed.error.code ?? ''}: ${parsed.error.message ?? 'unknown error'}`,
       );
@@ -88,6 +118,14 @@ export async function generateMockupImage(
     for (const candidate of parsed.candidates ?? []) {
       for (const part of candidate.content?.parts ?? []) {
         if (part.inlineData?.data) {
+          logger.info('gemini.request.success', {
+            variant,
+            model,
+            mimeType: part.inlineData.mimeType,
+            base64Length: part.inlineData.data.length,
+            durationMs: Date.now() - startedAt,
+          });
+
           return {
             mimeType: part.inlineData.mimeType,
             data: part.inlineData.data,
@@ -96,7 +134,25 @@ export async function generateMockupImage(
       }
     }
 
+    logger.warn('gemini.request.no_image_data', {
+      variant,
+      model,
+      candidateCount: parsed.candidates?.length ?? 0,
+      durationMs: Date.now() - startedAt,
+    });
+
     throw new Error('Gemini returned no image data.');
+  } catch (error) {
+    logger.error(
+      'gemini.request.failed',
+      {
+        variant,
+        model,
+        durationMs: Date.now() - startedAt,
+      },
+      error,
+    );
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
