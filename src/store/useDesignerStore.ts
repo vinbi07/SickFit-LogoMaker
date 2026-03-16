@@ -1,6 +1,11 @@
 import { fabric } from 'fabric';
 import { create } from 'zustand';
-import type { CanvasSnapshot, SockColorKey, TextControlsState } from '../types/designer';
+import type {
+  AIGenerationJobStatus,
+  CanvasSnapshot,
+  SockColorKey,
+  TextControlsState,
+} from '../types/designer';
 
 type DesignerState = {
   canvas: fabric.Canvas | null;
@@ -12,6 +17,9 @@ type DesignerState = {
   isRestoringHistory: boolean;
   isExporting: boolean;
   exportError: string | null;
+  aiJobId: string | null;
+  aiStatus: AIGenerationJobStatus | null;
+  aiStatusMessage: string | null;
   setCanvas: (canvas: fabric.Canvas | null) => void;
   setSelectedColor: (color: SockColorKey) => void;
   setActiveObject: (object: fabric.Object | null) => void;
@@ -21,6 +29,13 @@ type DesignerState = {
   setIsRestoringHistory: (value: boolean) => void;
   setIsExporting: (value: boolean) => void;
   setExportError: (message: string | null) => void;
+  setAIGenerationState: (
+    patch: Partial<{
+      aiJobId: string | null;
+      aiStatus: AIGenerationJobStatus | null;
+      aiStatusMessage: string | null;
+    }>,
+  ) => void;
 };
 
 const defaultTextControls: TextControlsState = {
@@ -44,6 +59,9 @@ export const useDesignerStore = create<DesignerState>((set) => ({
   isRestoringHistory: false,
   isExporting: false,
   exportError: null,
+  aiJobId: null,
+  aiStatus: null,
+  aiStatusMessage: null,
   setCanvas: (canvas) => set({ canvas }),
   setSelectedColor: (selectedColor) => set({ selectedColor }),
   setActiveObject: (activeObject) => set({ activeObject }),
@@ -54,4 +72,13 @@ export const useDesignerStore = create<DesignerState>((set) => ({
   setIsRestoringHistory: (isRestoringHistory) => set({ isRestoringHistory }),
   setIsExporting: (isExporting) => set({ isExporting }),
   setExportError: (exportError) => set({ exportError }),
+  setAIGenerationState: (patch) =>
+    set((state) => ({
+      aiJobId: patch.aiJobId === undefined ? state.aiJobId : patch.aiJobId,
+      aiStatus: patch.aiStatus === undefined ? state.aiStatus : patch.aiStatus,
+      aiStatusMessage:
+        patch.aiStatusMessage === undefined
+          ? state.aiStatusMessage
+          : patch.aiStatusMessage,
+    })),
 }));

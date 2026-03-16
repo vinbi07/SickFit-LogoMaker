@@ -17,11 +17,18 @@ import { useFabricCanvas } from "../hooks/useFabricCanvas";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useDesignerStore } from "../store/useDesignerStore";
 import type {
+  AIGenerationRequest,
   ExportConfig,
   SockColorKey,
   TextControlsState,
 } from "../types/designer";
+import {
+  createAIMockupJob,
+  isAIMockupEnabled,
+  waitForAIMockupJob,
+} from "../services/mockupGenerationApi";
 import { exportMockup } from "../utils/exportMockup";
+import { extractDesignTexture } from "../utils/fabricTextureExport";
 import { loadImageFromDataUrl } from "../utils/fabricImageLoader";
 import { overlayTemplateUrl, sockImages } from "../utils/sockImages";
 import styles from "../styles/SockDesigner.module.css";
@@ -56,10 +63,15 @@ export function SockDesigner() {
   const textControls = useDesignerStore((state) => state.textControls);
   const isExporting = useDesignerStore((state) => state.isExporting);
   const exportError = useDesignerStore((state) => state.exportError);
+  const aiStatus = useDesignerStore((state) => state.aiStatus);
+  const aiStatusMessage = useDesignerStore((state) => state.aiStatusMessage);
   const setSelectedColor = useDesignerStore((state) => state.setSelectedColor);
   const setTextControls = useDesignerStore((state) => state.setTextControls);
   const setIsExporting = useDesignerStore((state) => state.setIsExporting);
   const setExportError = useDesignerStore((state) => state.setExportError);
+  const setAIGenerationState = useDesignerStore(
+    (state) => state.setAIGenerationState,
+  );
 
   const { loadSockBackground } = useFabricCanvas(canvasRef);
   const history = useCanvasHistory(canvas);
@@ -371,6 +383,70 @@ export function SockDesigner() {
     };
   }, [selectedColor]);
 
+  const aiGenerationEnabled = useMemo(() => isAIMockupEnabled(), []);
+
+  const downloadButtonLabel = useMemo(() => {
+    if (!isExporting) {
+      return aiGenerationEnabled ? "Generate AI Mockup" : "Download Mockup";
+    }
+
+    if (!aiGenerationEnabled) {
+      return "Exporting...";
+    }
+
+    if (aiStatus === "queued") {
+      return "Queued...";
+    }
+
+    if (aiStatus === "running") {
+      return "Generating...";
+    }
+
+    return "Exporting...";
+  }, [aiGenerationEnabled, aiStatus, isExporting]);
+
+  const buildAIGenerationRequest =
+    useCallback((): AIGenerationRequest | null => {
+      if (!canvas) {
+        return null;
+      }
+
+      const texturePng = extractDesignTexture(canvas, exportConfig.printArea);
+
+      return {
+        canvasJson: canvas.toDatalessJSON(),
+        canvasSize: {
+          width: canvas.getWidth(),
+          height: canvas.getHeight(),
+        },
+        printArea: exportConfig.printArea,
+        selectedColor,
+        variants: ["studio", "on-foot"],
+        quality: "preview",
+        texturePng,
+      };
+    }, [canvas, exportConfig.printArea, selectedColor]);
+
+  const downloadImageFromUrl = useCallback(
+    async (imageUrl: string) => {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error("Unable to download generated mockup image.");
+      }
+
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = objectUrl;
+      anchor.download = `sock-${selectedColor}-ai-mockup.png`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(objectUrl);
+    },
+    [selectedColor],
+  );
+
   useEffect(() => {
     if (!canvas || !snapEnabled) {
       return;
@@ -545,19 +621,100 @@ export function SockDesigner() {
     setIsExporting(true);
 
     try {
+      if (aiGenerationEnabled) {
+        setAIGenerationState({
+          aiJobId: null,
+          aiStatus: "queued",
+          aiStatusMessage: "Submitting design for AI generation...",
+        });
+
+        const request = buildAIGenerationRequest();
+        if (!request) {
+          throw new Error("Unable to build AI generation request.");
+        }
+
+        const createdJob = await createAIMockupJob(request);
+        setAIGenerationState({
+          aiJobId: createdJob.id,
+          aiStatus: createdJob.status,
+          aiStatusMessage: "AI mockup request accepted.",
+        });
+
+        const completedJob = await waitForAIMockupJob(createdJob.id);
+        setAIGenerationState({
+          aiStatus: completedJob.status,
+          aiStatusMessage:
+            completedJob.status === "completed"
+              ? "AI mockup generated."
+              : (completedJob.errorMessage ?? "AI mockup generation failed."),
+        });
+
+        if (completedJob.status === "completed") {
+          const firstResult = completedJob.results?.[0];
+          if (!firstResult?.imageUrl) {
+            throw new Error("AI job completed without any generated images.");
+          }
+
+          await downloadImageFromUrl(firstResult.imageUrl);
+          addToast("AI mockup generated and downloaded.", "success");
+          window.location.href = exportConfig.redirectUrl;
+          return;
+        }
+
+        throw new Error(
+          completedJob.errorMessage ?? "AI mockup generation failed.",
+        );
+      }
+
       await exportMockup(canvas, exportConfig);
-    } catch {
-      setExportError(
-        "Download failed. One or more images may block cross-origin export.",
-      );
-      addToast(
-        "Download failed. Please verify image source permissions.",
-        "error",
-      );
+    } catch (error) {
+      const fallbackMessage =
+        error instanceof Error
+          ? error.message
+          : "Download failed. One or more images may block cross-origin export.";
+
+      setExportError(fallbackMessage);
+
+      if (aiGenerationEnabled) {
+        setAIGenerationState({
+          aiStatus: "failed",
+          aiStatusMessage: fallbackMessage,
+        });
+        addToast(
+          "AI generation failed. Falling back to static mockup.",
+          "error",
+        );
+
+        try {
+          await exportMockup(canvas, exportConfig);
+          addToast("Static mockup downloaded.", "info");
+          return;
+        } catch {
+          addToast(
+            "Download failed. Please verify image source permissions.",
+            "error",
+          );
+        }
+      } else {
+        addToast(
+          "Download failed. Please verify image source permissions.",
+          "error",
+        );
+      }
     } finally {
       setIsExporting(false);
     }
-  }, [addToast, canvas, exportConfig, setExportError, setIsExporting]);
+  }, [
+    addToast,
+    aiGenerationEnabled,
+    buildAIGenerationRequest,
+    canvas,
+    downloadImageFromUrl,
+    exportConfig,
+    setAIGenerationState,
+    setExportError,
+    setIsExporting,
+  ]);
 
   const canvasDebugInfo = useMemo<CanvasDebugInfo>(() => {
     void layerRevision;
@@ -632,10 +789,14 @@ export function SockDesigner() {
       lastBackgroundUrl: lastBackgroundUrl || "none",
       lastBackgroundError: lastBackgroundError || "none",
       exportError: exportError ?? "none",
+      aiStatus: aiStatus ?? "none",
+      aiStatusMessage: aiStatusMessage ?? "none",
     };
   }, [
     activeObject?.type,
     activeTool,
+    aiStatus,
+    aiStatusMessage,
     backgroundLoadStatus,
     canvas,
     exportError,
@@ -667,6 +828,7 @@ export function SockDesigner() {
             onRedo={history.redo}
             onDeleteSelected={handleDeleteSelected}
             onDownload={handleDownload}
+            downloadButtonLabel={downloadButtonLabel}
             onZoomOut={handleZoomOut}
             onZoomIn={handleZoomIn}
             onZoomReset={handleZoomReset}

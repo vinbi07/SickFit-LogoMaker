@@ -13,6 +13,7 @@ type TopToolbarProps = {
   onRedo: () => void;
   onDeleteSelected: () => void;
   onDownload: () => void;
+  downloadButtonLabel?: string;
   onZoomOut: () => void;
   onZoomIn: () => void;
   onZoomReset: () => void;
@@ -57,6 +58,7 @@ export function TopToolbar({
   onRedo,
   onDeleteSelected,
   onDownload,
+  downloadButtonLabel,
   onZoomOut,
   onZoomIn,
   onZoomReset,
@@ -221,7 +223,9 @@ export function TopToolbar({
         disabled={isExporting}
         onClick={onDownload}
       >
-        {isExporting ? "Exporting..." : "Download Mockup"}
+        {isExporting
+          ? (downloadButtonLabel ?? "Exporting...")
+          : (downloadButtonLabel ?? "Download Mockup")}
       </button>
     </div>
   );

@@ -22,6 +22,8 @@ export type CanvasDebugInfo = {
   lastBackgroundUrl: string;
   lastBackgroundError: string;
   exportError: string;
+  aiStatus: string;
+  aiStatusMessage: string;
 };
 
 type CanvasWorkspaceProps = {
@@ -73,6 +75,10 @@ export function CanvasWorkspace({
             <span>{debugInfo.loadStatus}</span>
             <span>Export Error</span>
             <span>{debugInfo.exportError}</span>
+            <span>AI Status</span>
+            <span>{debugInfo.aiStatus}</span>
+            <span>AI Message</span>
+            <span>{debugInfo.aiStatusMessage}</span>
             <span>Last BG Error</span>
             <span>{debugInfo.lastBackgroundError}</span>
             <span>Last BG URL</span>
