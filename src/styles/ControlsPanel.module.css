@@ -1,91 +1,93 @@
 .section {
-  margin-bottom: 1rem;
+  margin-bottom: 0.9rem;
 }
 
 .section h2 {
   font-family: var(--font-heading);
-  font-weight: bold;
-  font-size: 1.8rem;
-  margin-bottom: 1rem;
+  font-weight: 700;
+  font-size: 1.05rem;
+  margin-bottom: 0.7rem;
   margin-top: 0;
-  padding-left: 0;
+  color: #1b2738;
 }
 
 .colorPicker {
-  background: var(--color-panel);
-  box-shadow: var(--shadow-panel);
+  background: #f5f8fc;
+  border: 1px solid #d2dbe7;
+  box-shadow: none;
   padding: 10px;
-  border-radius: 8px;
+  border-radius: 12px;
   display: flex;
   justify-content: center;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .colorCircle {
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border-radius: 50%;
-  border: 3px solid #ccc;
+  border: 2px solid #c8d2de;
   cursor: pointer;
 }
 
 .activeCircle {
-  border: 3px solid #333;
+  border: 2px solid #101a2a;
 }
 
 .selectedColorName {
-  margin-top: 10px;
-  font-weight: bold;
+  margin-top: 8px;
+  font-weight: 600;
   font-family: var(--font-body);
+  color: #334357;
 }
 
 .uploadInput {
   font-family: var(--font-body);
-  background: var(--color-panel);
-  box-shadow: var(--shadow-panel);
-  padding: 1rem;
-  font-size: 1.125rem;
+  background: #ffffff;
+  border: 1px solid #ccd6e3;
+  box-shadow: none;
+  padding: 0.85rem;
+  font-size: 0.95rem;
   width: 100%;
-  border-radius: 8px;
+  border-radius: 10px;
 }
 
 .uploadDropzone {
-  border: 2px dashed #c9c9c9;
-  border-radius: 10px;
-  background: #fafafa;
+  border: 1px dashed #b8c6d8;
+  border-radius: 12px;
+  background: #f8fbff;
   padding: 12px;
   transition: border-color 0.2s ease, background-color 0.2s ease;
 }
 
 .dropzoneActive {
-  border-color: #111;
-  background: #f3f3f3;
+  border-color: #22344e;
+  background: #ecf3fb;
 }
 
 .dropzoneHint {
   margin: 0;
   font-family: var(--font-heading);
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 700;
 }
 
 .dropzoneHintSecondary {
   margin: 0.25rem 0 0.75rem;
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 0.84rem;
   color: var(--color-muted);
 }
 
 .uploadInput::-webkit-file-upload-button {
-  background-color: #fff;
-  color: #333;
-  padding: 8px 16px;
+  background-color: #111d2e;
+  color: #fff;
+  padding: 8px 12px;
   border: none;
-  border-radius: 10px;
-  font-size: 1rem;
-  font-weight: bold;
-  box-shadow: var(--shadow-panel);
-  margin-right: 1rem;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  margin-right: 0.8rem;
   cursor: pointer;
 }

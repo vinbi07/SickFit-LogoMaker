@@ -22,6 +22,8 @@ export type CanvasSnapshot = {
 export type TextControlsState = {
   text: string;
   fontFamily: string;
+  fontSize: number;
+  textAlign: 'left' | 'center' | 'right' | 'justify';
   fill: string;
   bold: boolean;
   italic: boolean;

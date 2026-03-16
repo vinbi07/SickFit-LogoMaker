@@ -25,6 +25,8 @@ export function useCanvasSelectionSync(canvas: fabric.Canvas | null): void {
       setTextControls({
         text: text.text ?? '',
         fontFamily: text.fontFamily ?? 'Arial',
+        fontSize: typeof text.fontSize === 'number' ? text.fontSize : 36,
+        textAlign: (text.textAlign as 'left' | 'center' | 'right' | 'justify') ?? 'center',
         fill: (text.fill as string) ?? '#000000',
         bold: text.fontWeight === 'bold',
         italic: text.fontStyle === 'italic',

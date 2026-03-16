@@ -26,6 +26,8 @@ type DesignerState = {
 const defaultTextControls: TextControlsState = {
   text: '',
   fontFamily: 'Arial',
+  fontSize: 36,
+  textAlign: 'center',
   fill: '#000000',
   bold: false,
   italic: false,

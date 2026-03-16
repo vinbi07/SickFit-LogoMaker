@@ -37,9 +37,16 @@ export function TextControls({
   onControlsChange,
   onAddText,
 }: TextControlsProps) {
+  const handleFontSizeChange = (value: number) => {
+    const safeValue = Number.isFinite(value)
+      ? Math.max(8, Math.min(240, value))
+      : 36;
+    onControlsChange({ fontSize: safeValue });
+  };
+
   return (
     <section className={styles.section}>
-      <h2>Step 3 (optional): Add Text</h2>
+      <h2>Text</h2>
       <div className={styles.card}>
         <input
           type="text"
@@ -71,6 +78,43 @@ export function TextControls({
                 {font}
               </option>
             ))}
+          </select>
+        </div>
+
+        <div className={styles.controlGroup}>
+          <label htmlFor="font-size">Size:</label>
+          <input
+            id="font-size"
+            type="number"
+            min={8}
+            max={240}
+            step={1}
+            value={controls.fontSize}
+            onChange={(event) =>
+              handleFontSizeChange(Number(event.target.value))
+            }
+          />
+        </div>
+
+        <div className={styles.controlGroup}>
+          <label htmlFor="text-align">Align:</label>
+          <select
+            id="text-align"
+            value={controls.textAlign}
+            onChange={(event) =>
+              onControlsChange({
+                textAlign: event.target.value as
+                  | "left"
+                  | "center"
+                  | "right"
+                  | "justify",
+              })
+            }
+          >
+            <option value="left">Left</option>
+            <option value="center">Center</option>
+            <option value="right">Right</option>
+            <option value="justify">Justify</option>
           </select>
         </div>
 

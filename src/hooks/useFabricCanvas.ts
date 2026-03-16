@@ -16,7 +16,7 @@ export function useFabricCanvas(
 ): UseFabricCanvasResult {
   const canvas = useDesignerStore((state) => state.canvas);
   const setCanvas = useDesignerStore((state) => state.setCanvas);
-  const loadingRef = useRef(false);
+  const requestRef = useRef(0);
 
   useEffect(() => {
     const element = canvasElementRef.current;
@@ -28,6 +28,10 @@ export function useFabricCanvas(
       preserveObjectStacking: true,
     });
 
+    const selectionElement = nextCanvas.getSelectionElement();
+    selectionElement.style.backgroundColor = 'transparent';
+    selectionElement.style.opacity = '1';
+
     setCanvas(nextCanvas);
 
     return () => {
@@ -38,51 +42,78 @@ export function useFabricCanvas(
 
   const loadSockBackground = useCallback(
     async (color: SockColorKey, clearCanvas = true) => {
-      if (!canvas || loadingRef.current) {
-        return;
+      if (!canvas) {
+        throw new Error('Canvas not ready');
       }
 
       const backgroundUrl = sockImages[color]?.right;
       if (!backgroundUrl) {
+        throw new Error('Missing background URL');
+      }
+
+      const requestId = ++requestRef.current;
+
+      const img = await loadFabricImage(backgroundUrl);
+
+      if (requestId !== requestRef.current) {
         return;
       }
 
-      loadingRef.current = true;
+      img.selectable = false;
+      img.evented = false;
 
-      try {
-        const img = await loadFabricImage(backgroundUrl);
-        img.selectable = false;
-        img.evented = false;
+      const imageWidth = img.width ?? 600;
+      const imageHeight = img.height ?? 600;
+      const scale = getCanvasScale(imageWidth, imageHeight);
 
-        const imageWidth = img.width ?? 600;
-        const imageHeight = img.height ?? 600;
-        const scale = getCanvasScale(imageWidth, imageHeight);
+      canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
+      canvas.setZoom(1);
 
-        canvas.setViewportTransform([1, 0, 0, 1, 0, 0]);
-        canvas.setZoom(1);
-
-        if (clearCanvas) {
-          canvas.clear();
-        }
-
-        canvas.setWidth(imageWidth * scale);
-        canvas.setHeight(imageHeight * scale);
-
-        img.set({
-          left: 0,
-          top: 0,
-          originX: 'left',
-          originY: 'top',
-          scaleX: scale,
-          scaleY: scale,
-        });
-
-        canvas.setBackgroundImage(img, () => {
-          canvas.requestRenderAll();
-        });
-      } finally {
-        loadingRef.current = false;
+      if (clearCanvas) {
+        canvas.clear();
       }
+
+      canvas.setWidth(imageWidth * scale);
+      canvas.setHeight(imageHeight * scale);
+      canvas.setBackgroundColor('#e6ebf2', () => {
+        canvas.requestRenderAll();
+      });
+
+      const widthPx = `${imageWidth * scale}px`;
+      const heightPx = `${imageHeight * scale}px`;
+
+      const lowerCanvasElement = canvas.getElement();
+      const upperCanvasElement = canvas.getSelectionElement();
+      const wrapperElement = lowerCanvasElement.parentElement;
+
+      lowerCanvasElement.style.width = widthPx;
+      lowerCanvasElement.style.height = heightPx;
+      upperCanvasElement.style.width = widthPx;
+      upperCanvasElement.style.height = heightPx;
+
+      if (wrapperElement) {
+        wrapperElement.style.width = widthPx;
+        wrapperElement.style.height = heightPx;
+      }
+
+      canvas.calcOffset();
+
+      img.set({
+        left: 0,
+        top: 0,
+        originX: 'left',
+        originY: 'top',
+        scaleX: scale,
+        scaleY: scale,
+      });
+
+      await new Promise<void>((resolve) => {
+        canvas.setBackgroundImage(img, () => {
+          canvas.calcOffset();
+          canvas.renderAll();
+          resolve();
+        });
+      });
     },
     [canvas],
   );

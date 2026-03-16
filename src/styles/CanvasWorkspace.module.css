@@ -1,0 +1,82 @@
+.workspace {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 18px;
+}
+
+.stage {
+  position: relative;
+  min-height: 360px;
+  width: 100%;
+  display: grid;
+  place-items: center;
+  border-radius: 20px;
+  background:
+    linear-gradient(90deg, rgba(26, 35, 49, 0.03) 1px, transparent 1px),
+    linear-gradient(rgba(26, 35, 49, 0.03) 1px, transparent 1px),
+    #f8fafc;
+  background-size: 24px 24px;
+  border: 1px solid #dae2eb;
+  padding: 28px;
+}
+
+.debugOverlay {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 2;
+  width: min(420px, calc(100% - 28px));
+  border: 1px solid #d0dae7;
+  border-radius: 12px;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 6px 18px rgba(20, 33, 50, 0.14);
+  font-family: var(--font-body);
+  font-size: 0.77rem;
+  color: #1a2435;
+}
+
+.debugOverlay strong {
+  display: block;
+  margin-bottom: 6px;
+  font-family: var(--font-heading);
+  font-size: 0.84rem;
+}
+
+.debugGrid {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  gap: 2px 8px;
+}
+
+.debugGrid span:nth-child(odd) {
+  color: #4a5a70;
+  font-weight: 600;
+}
+
+.debugGrid span:nth-child(even) {
+  word-break: break-word;
+}
+
+.debugUrl {
+  font-size: 0.72rem;
+  max-height: 42px;
+  overflow-y: auto;
+}
+
+.workspaceMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.82rem;
+  color: var(--color-muted);
+  background: #ffffff;
+  border: 1px solid #d6dde8;
+  border-radius: 999px;
+  padding: 7px 12px;
+}

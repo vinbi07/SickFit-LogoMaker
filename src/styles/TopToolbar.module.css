@@ -1,0 +1,126 @@
+.toolbar {
+  display: grid;
+  grid-template-columns: auto auto auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.brandGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-right: 6px;
+}
+
+.brandTitle {
+  font-family: var(--font-heading);
+  font-size: 1.05rem;
+  letter-spacing: 0.02em;
+  font-weight: 700;
+}
+
+.brandSubtle {
+  font-size: 0.72rem;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.commandGroup,
+.contextGroup {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f4f6fa;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 4px;
+}
+
+.commandGroup button,
+.contextGroup button,
+.contextGroup select,
+.contextGroup input,
+.downloadButton {
+  border: 1px solid transparent;
+  background: #ffffff;
+  border-radius: 8px;
+  min-height: 34px;
+  padding: 7px 10px;
+  font-size: 0.9rem;
+  transition: border-color 150ms ease, box-shadow 150ms ease, background-color 150ms ease;
+}
+
+.commandGroup button:hover,
+.contextGroup button:hover,
+.contextGroup select:hover,
+.contextGroup input:hover,
+.downloadButton:hover {
+  border-color: #cdd5df;
+}
+
+.commandGroup button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.contextGroup {
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.contextGroup select {
+  max-width: 170px;
+}
+
+.contextHint {
+  color: var(--color-muted);
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.toggleActive {
+  border-color: #161f2b !important;
+  color: #ffffff;
+  background: #161f2b !important;
+}
+
+.zoomReadout {
+  min-width: 70px;
+}
+
+.sizeControl {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sizeControl input {
+  width: 68px;
+}
+
+.downloadButton {
+  background: #161f2b;
+  color: #ffffff;
+  border-color: #161f2b;
+  font-weight: 600;
+}
+
+.downloadButton:disabled {
+  opacity: 0.55;
+  cursor: wait;
+}
+
+@media (max-width: 1280px) {
+  .toolbar {
+    grid-template-columns: auto auto auto;
+    grid-auto-rows: auto;
+  }
+
+  .contextGroup,
+  .contextHint,
+  .downloadButton {
+    grid-column: 1 / -1;
+  }
+}

@@ -3,12 +3,21 @@
   --font-body: Poppins, 'Segoe UI', Arial, sans-serif;
   --color-text: #222;
   --color-muted: #555;
+  --color-border: #d7dee9;
   --color-panel: #f1f1f1;
   --color-surface: #ffffff;
   --color-dark: #111;
   --color-danger: #e72027;
+  --color-workspace: #eef1f5;
   --radius-card: 16px;
   --radius-input: 8px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
   --shadow-soft: 0 10px 24px rgba(0, 0, 0, 0.08);
   --shadow-panel: rgba(100, 100, 111, 0.2) 0 7px 29px 0;
+  --z-toolbar: 200;
+  --z-toast: 1000;
 }

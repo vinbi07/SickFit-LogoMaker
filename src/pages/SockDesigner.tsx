@@ -1,11 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { fabric } from "fabric";
-import { CanvasInstructions } from "../components/Canvas/CanvasInstructions";
-import { CanvasToolbar } from "../components/Canvas/CanvasToolbar";
-import { SockCanvas } from "../components/Canvas/SockCanvas";
-import { ColorPicker } from "../components/Controls/ColorPicker";
-import { TextControls } from "../components/Controls/TextControls";
-import { UploadImage } from "../components/Controls/UploadImage";
+import {
+  CanvasWorkspace,
+  type CanvasDebugInfo,
+} from "../components/Layout/CanvasWorkspace";
+import { EditorLayout } from "../components/Layout/EditorLayout";
+import { LeftDock, type EditorToolKey } from "../components/Layout/LeftDock";
+import { LayersPanel } from "../components/Layout/LayersPanel";
+import { ToolPanel } from "../components/Layout/ToolPanel";
+import { TopToolbar } from "../components/Layout/TopToolbar";
 import { ToastStack, type ToastMessage } from "../components/Toast/ToastStack";
 import { useCanvasHistory } from "../hooks/useCanvasHistory";
 import { useCanvasInteractions } from "../hooks/useCanvasInteractions";
@@ -34,9 +37,18 @@ function readFileAsDataUrl(file: File): Promise<string> {
 
 export function SockDesigner() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const hasInitialized = useRef(false);
+  const initializedCanvasRef = useRef<fabric.Canvas | null>(null);
   const toastIdRef = useRef(0);
   const [toasts, setToasts] = useState<ToastMessage[]>([]);
+  const [activeTool, setActiveTool] = useState<EditorToolKey>("upload");
+  const [zoomPercent, setZoomPercent] = useState(100);
+  const [snapEnabled, setSnapEnabled] = useState(true);
+  const [layerRevision, setLayerRevision] = useState(0);
+  const [backgroundLoadStatus, setBackgroundLoadStatus] = useState<
+    "idle" | "loading" | "ready" | "error"
+  >("idle");
+  const [lastBackgroundUrl, setLastBackgroundUrl] = useState("");
+  const [lastBackgroundError, setLastBackgroundError] = useState("");
 
   const canvas = useDesignerStore((state) => state.canvas);
   const selectedColor = useDesignerStore((state) => state.selectedColor);
@@ -70,14 +82,32 @@ export function SockDesigner() {
   useKeyboardShortcuts({ onUndo: history.undo, onRedo: history.redo });
 
   useEffect(() => {
-    if (!canvas || hasInitialized.current) {
+    if (!canvas || initializedCanvasRef.current === canvas) {
       return;
     }
 
-    hasInitialized.current = true;
-    loadSockBackground(selectedColor, true)
-      .then(() => history.pushSnapshot())
+    const initialColor: SockColorKey = "white";
+
+    initializedCanvasRef.current = canvas;
+    setBackgroundLoadStatus("loading");
+    setLastBackgroundUrl(sockImages[initialColor]?.right ?? "");
+    setLastBackgroundError("");
+    setSelectedColor(initialColor);
+    loadSockBackground(initialColor, true)
+      .then(() => {
+        setBackgroundLoadStatus("ready");
+        history.pushSnapshot();
+        setLayerRevision((value) => value + 1);
+      })
       .catch(() => {
+        initializedCanvasRef.current = null;
+        canvas.setWidth(700);
+        canvas.setHeight(700);
+        canvas.setBackgroundColor("#ffffff", () => {
+          canvas.requestRenderAll();
+        });
+        setBackgroundLoadStatus("error");
+        setLastBackgroundError("initial background load failed");
         setExportError("Unable to load initial sock image.");
         addToast("Unable to load initial sock image.", "error");
       });
@@ -86,18 +116,79 @@ export function SockDesigner() {
     canvas,
     history,
     loadSockBackground,
-    selectedColor,
     setExportError,
+    setSelectedColor,
   ]);
+
+  useEffect(() => {
+    if (!canvas) {
+      return;
+    }
+
+    const syncZoom = () => {
+      setZoomPercent(Math.round(canvas.getZoom() * 100));
+    };
+
+    const syncLayers = () => {
+      setLayerRevision((value) => value + 1);
+    };
+
+    syncZoom();
+    syncLayers();
+
+    canvas.on("mouse:wheel", syncZoom);
+    canvas.on("object:added", syncLayers);
+    canvas.on("object:removed", syncLayers);
+    canvas.on("object:modified", syncLayers);
+    canvas.on("selection:created", syncLayers);
+    canvas.on("selection:updated", syncLayers);
+    canvas.on("selection:cleared", syncLayers);
+
+    return () => {
+      canvas.off("mouse:wheel", syncZoom);
+      canvas.off("object:added", syncLayers);
+      canvas.off("object:removed", syncLayers);
+      canvas.off("object:modified", syncLayers);
+      canvas.off("selection:created", syncLayers);
+      canvas.off("selection:updated", syncLayers);
+      canvas.off("selection:cleared", syncLayers);
+    };
+  }, [canvas]);
 
   const handleColorSelect = useCallback(
     async (color: SockColorKey) => {
-      setSelectedColor(color);
-      await loadSockBackground(color, true);
-      history.pushSnapshot();
-      addToast(`Sock color changed to ${color}.`, "info");
+      try {
+        setBackgroundLoadStatus("loading");
+        setLastBackgroundUrl(sockImages[color]?.right ?? "");
+        setLastBackgroundError("");
+        setSelectedColor(color);
+        await loadSockBackground(color, true);
+        setBackgroundLoadStatus("ready");
+        history.pushSnapshot();
+        setLayerRevision((value) => value + 1);
+        addToast(`Sock color changed to ${color}.`, "info");
+      } catch {
+        if (canvas) {
+          canvas.setWidth(700);
+          canvas.setHeight(700);
+          canvas.setBackgroundColor("#ffffff", () => {
+            canvas.requestRenderAll();
+          });
+        }
+        setBackgroundLoadStatus("error");
+        setLastBackgroundError(`failed to load color ${color}`);
+        setExportError("Unable to switch sock color. Please try again.");
+        addToast("Unable to switch sock color. Please try again.", "error");
+      }
     },
-    [addToast, history, loadSockBackground, setSelectedColor],
+    [
+      addToast,
+      canvas,
+      history,
+      loadSockBackground,
+      setExportError,
+      setSelectedColor,
+    ],
   );
 
   const handleUpload = useCallback(
@@ -159,6 +250,12 @@ export function SockDesigner() {
       if (patch.fill !== undefined) {
         textObject.set("fill", patch.fill);
       }
+      if (patch.fontSize !== undefined) {
+        textObject.set("fontSize", Math.max(8, Math.min(240, patch.fontSize)));
+      }
+      if (patch.textAlign !== undefined) {
+        textObject.set("textAlign", patch.textAlign);
+      }
       if (patch.bold !== undefined) {
         textObject.set("fontWeight", patch.bold ? "bold" : "normal");
       }
@@ -191,8 +288,9 @@ export function SockDesigner() {
     const text = new fabric.Text(textControls.text.trim(), {
       left: canvas.getWidth() / 2,
       top: canvas.getHeight() / 2,
-      fontSize: 36,
+      fontSize: textControls.fontSize,
       fontFamily: textControls.fontFamily,
+      textAlign: textControls.textAlign,
       fill: textControls.fill,
       fontWeight: textControls.bold ? "bold" : "normal",
       fontStyle: textControls.italic ? "italic" : "normal",
@@ -222,6 +320,42 @@ export function SockDesigner() {
     canvas.requestRenderAll();
   }, [canvas]);
 
+  const setZoom = useCallback(
+    (nextZoom: number) => {
+      if (!canvas) {
+        return;
+      }
+
+      const clamped = Math.max(0.5, Math.min(3, nextZoom));
+      const centerPoint = new fabric.Point(
+        canvas.getWidth() / 2,
+        canvas.getHeight() / 2,
+      );
+      canvas.zoomToPoint(centerPoint, clamped);
+      canvas.requestRenderAll();
+      setZoomPercent(Math.round(clamped * 100));
+    },
+    [canvas],
+  );
+
+  const handleZoomIn = useCallback(() => {
+    if (!canvas) {
+      return;
+    }
+    setZoom(canvas.getZoom() + 0.1);
+  }, [canvas, setZoom]);
+
+  const handleZoomOut = useCallback(() => {
+    if (!canvas) {
+      return;
+    }
+    setZoom(canvas.getZoom() - 0.1);
+  }, [canvas, setZoom]);
+
+  const handleZoomReset = useCallback(() => {
+    setZoom(1);
+  }, [setZoom]);
+
   const exportConfig = useMemo<ExportConfig>(() => {
     return {
       templateUrl: overlayTemplateUrl,
@@ -236,6 +370,170 @@ export function SockDesigner() {
       },
     };
   }, [selectedColor]);
+
+  useEffect(() => {
+    if (!canvas || !snapEnabled) {
+      return;
+    }
+
+    const threshold = 8;
+
+    const onObjectMoving = (event: fabric.IEvent<Event>) => {
+      const target = event.target;
+      if (!target) {
+        return;
+      }
+
+      const canvasWidth = canvas.getWidth();
+      const canvasHeight = canvas.getHeight();
+
+      const printArea = {
+        left: canvasWidth * exportConfig.printArea.xRatio,
+        top: canvasHeight * exportConfig.printArea.yRatio,
+        width: canvasWidth * exportConfig.printArea.widthRatio,
+        height: canvasHeight * exportConfig.printArea.heightRatio,
+      };
+
+      const center = target.getCenterPoint();
+      const bounds = target.getBoundingRect(true, true);
+
+      let nextCenterX = center.x;
+      let nextCenterY = center.y;
+
+      if (Math.abs(center.x - canvasWidth / 2) < threshold) {
+        nextCenterX = canvasWidth / 2;
+      }
+      if (Math.abs(center.y - canvasHeight / 2) < threshold) {
+        nextCenterY = canvasHeight / 2;
+      }
+
+      const boundsLeft = bounds.left;
+      const boundsRight = bounds.left + bounds.width;
+      const boundsTop = bounds.top;
+      const boundsBottom = bounds.top + bounds.height;
+
+      const printLeft = printArea.left;
+      const printRight = printArea.left + printArea.width;
+      const printTop = printArea.top;
+      const printBottom = printArea.top + printArea.height;
+
+      if (Math.abs(boundsLeft - printLeft) < threshold) {
+        nextCenterX += printLeft - boundsLeft;
+      } else if (Math.abs(boundsRight - printRight) < threshold) {
+        nextCenterX += printRight - boundsRight;
+      }
+
+      if (Math.abs(boundsTop - printTop) < threshold) {
+        nextCenterY += printTop - boundsTop;
+      } else if (Math.abs(boundsBottom - printBottom) < threshold) {
+        nextCenterY += printBottom - boundsBottom;
+      }
+
+      target.setPositionByOrigin(
+        new fabric.Point(nextCenterX, nextCenterY),
+        "center",
+        "center",
+      );
+    };
+
+    canvas.on("object:moving", onObjectMoving);
+
+    return () => {
+      canvas.off("object:moving", onObjectMoving);
+    };
+  }, [
+    canvas,
+    exportConfig.printArea.heightRatio,
+    exportConfig.printArea.widthRatio,
+    exportConfig.printArea.xRatio,
+    exportConfig.printArea.yRatio,
+    snapEnabled,
+  ]);
+
+  const layers = useMemo(() => {
+    if (!canvas) {
+      return [];
+    }
+
+    // Forces recomputation when canvas object events bump revision.
+    void layerRevision;
+
+    return canvas.getObjects().map((object, index) => {
+      const labelType = object.type === "text" ? "Text" : "Image";
+      return {
+        id: `${object.type ?? "layer"}-${index}`,
+        label: `${labelType} ${index + 1}`,
+        index,
+        isActive: activeObject === object,
+      };
+    });
+  }, [activeObject, canvas, layerRevision]);
+
+  const handleSelectLayer = useCallback(
+    (index: number) => {
+      if (!canvas) {
+        return;
+      }
+
+      const object = canvas.getObjects()[index];
+      if (!object) {
+        return;
+      }
+
+      canvas.setActiveObject(object);
+      canvas.requestRenderAll();
+    },
+    [canvas],
+  );
+
+  const handleDeleteLayer = useCallback(
+    (index: number) => {
+      if (!canvas) {
+        return;
+      }
+
+      const object = canvas.getObjects()[index];
+      if (!object) {
+        return;
+      }
+
+      canvas.remove(object);
+      canvas.discardActiveObject();
+      canvas.requestRenderAll();
+      setLayerRevision((value) => value + 1);
+    },
+    [canvas],
+  );
+
+  const handleMoveLayer = useCallback(
+    (index: number, direction: "up" | "down") => {
+      if (!canvas) {
+        return;
+      }
+
+      const objects = canvas.getObjects();
+      const object = objects[index];
+      if (!object) {
+        return;
+      }
+
+      const step = direction === "up" ? 1 : -1;
+      const targetIndex = Math.max(
+        0,
+        Math.min(objects.length - 1, index + step),
+      );
+      if (targetIndex === index) {
+        return;
+      }
+
+      object.moveTo(targetIndex);
+      canvas.setActiveObject(object);
+      canvas.requestRenderAll();
+      history.pushSnapshot();
+      setLayerRevision((value) => value + 1);
+    },
+    [canvas, history],
+  );
 
   const handleDownload = useCallback(async () => {
     if (!canvas) {
@@ -261,6 +559,93 @@ export function SockDesigner() {
     }
   }, [addToast, canvas, exportConfig, setExportError, setIsExporting]);
 
+  const canvasDebugInfo = useMemo<CanvasDebugInfo>(() => {
+    void layerRevision;
+    void zoomPercent;
+
+    const width = canvas?.getWidth() ?? 0;
+    const height = canvas?.getHeight() ?? 0;
+    const lowerCanvasElement = canvas?.getElement();
+    const upperCanvasElement = canvas?.getSelectionElement();
+    const wrapperElement = lowerCanvasElement?.parentElement;
+    const domCanvasWidth = lowerCanvasElement?.clientWidth ?? 0;
+    const domCanvasHeight = lowerCanvasElement?.clientHeight ?? 0;
+    const wrapperWidth = wrapperElement?.clientWidth ?? 0;
+    const wrapperHeight = wrapperElement?.clientHeight ?? 0;
+
+    const backgroundImage = canvas?.backgroundImage as fabric.Image | undefined;
+    const backgroundImageInfo = backgroundImage
+      ? `w:${backgroundImage.width ?? 0} h:${backgroundImage.height ?? 0} sx:${backgroundImage.scaleX ?? 0} sy:${backgroundImage.scaleY ?? 0} visible:${backgroundImage.visible !== false} opacity:${backgroundImage.opacity ?? 1}`
+      : "none";
+
+    let centerPixel = "n/a";
+    let topLeftPixel = "n/a";
+    let upperCenterPixel = "n/a";
+
+    try {
+      const context2d = lowerCanvasElement?.getContext("2d");
+      if (context2d && width > 1 && height > 1) {
+        const centerData = context2d.getImageData(
+          Math.floor(width / 2),
+          Math.floor(height / 2),
+          1,
+          1,
+        ).data;
+        const topLeftData = context2d.getImageData(1, 1, 1, 1).data;
+
+        centerPixel = `${centerData[0]},${centerData[1]},${centerData[2]},${centerData[3]}`;
+        topLeftPixel = `${topLeftData[0]},${topLeftData[1]},${topLeftData[2]},${topLeftData[3]}`;
+      }
+
+      const upperContext2d = upperCanvasElement?.getContext("2d");
+      if (upperContext2d && width > 1 && height > 1) {
+        const upperData = upperContext2d.getImageData(
+          Math.floor(width / 2),
+          Math.floor(height / 2),
+          1,
+          1,
+        ).data;
+        upperCenterPixel = `${upperData[0]},${upperData[1]},${upperData[2]},${upperData[3]}`;
+      }
+    } catch {
+      centerPixel = "unreadable";
+      topLeftPixel = "unreadable";
+      upperCenterPixel = "unreadable";
+    }
+
+    return {
+      canvasReady: Boolean(canvas),
+      canvasSize: `${width}x${height}`,
+      domCanvasSize: `${domCanvasWidth}x${domCanvasHeight}`,
+      wrapperSize: `${wrapperWidth}x${wrapperHeight}`,
+      zoom: `${Math.round((canvas?.getZoom() ?? 0) * 100)}%`,
+      objectCount: canvas?.getObjects().length ?? 0,
+      activeObjectType: activeObject?.type ?? "none",
+      hasBackgroundImage: Boolean(canvas?.backgroundImage),
+      backgroundImageInfo,
+      centerPixel,
+      topLeftPixel,
+      upperCenterPixel,
+      selectedColor,
+      activeTool,
+      loadStatus: backgroundLoadStatus,
+      lastBackgroundUrl: lastBackgroundUrl || "none",
+      lastBackgroundError: lastBackgroundError || "none",
+      exportError: exportError ?? "none",
+    };
+  }, [
+    activeObject?.type,
+    activeTool,
+    backgroundLoadStatus,
+    canvas,
+    exportError,
+    lastBackgroundError,
+    lastBackgroundUrl,
+    layerRevision,
+    selectedColor,
+    zoomPercent,
+  ]);
+
   return (
     <div className={styles.page}>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
@@ -268,49 +653,58 @@ export function SockDesigner() {
         Sorry, Mock Up Tool only for Desktop
       </h1>
 
-      <div className={styles.toolContainer}>
-        <section className={styles.canvasPanel}>
-          <SockCanvas canvasRef={canvasRef} />
-          <CanvasToolbar
+      <EditorLayout
+        topToolbar={
+          <TopToolbar
             canUndo={history.canUndo}
             canRedo={history.canRedo}
             isExporting={isExporting}
+            zoomPercent={zoomPercent}
+            snapEnabled={snapEnabled}
+            isTextSelected={activeObject?.type === "text"}
+            textControls={textControls}
             onUndo={history.undo}
             onRedo={history.redo}
             onDeleteSelected={handleDeleteSelected}
             onDownload={handleDownload}
+            onZoomOut={handleZoomOut}
+            onZoomIn={handleZoomIn}
+            onZoomReset={handleZoomReset}
+            onToggleSnap={() => setSnapEnabled((value) => !value)}
+            onTextControlsChange={handleTextControlsChange}
           />
-          <CanvasInstructions />
-        </section>
-
-        <aside className={styles.controlsPanel}>
-          <h1 className={styles.title}>
-            Let's Create
-            <br />
-            Your Perfect Sock
-          </h1>
-
-          <div className={styles.controlsGrid}>
-            <div className={styles.groupHalf}>
-              <ColorPicker
-                selectedColor={selectedColor}
-                onSelect={handleColorSelect}
-              />
-            </div>
-            <div className={styles.groupHalf}>
-              <UploadImage onUpload={handleUpload} />
-            </div>
-            <div className={styles.groupFull}>
-              <TextControls
-                controls={textControls}
-                onControlsChange={handleTextControlsChange}
-                onAddText={handleAddText}
-              />
-            </div>
-          </div>
-          {exportError && <p className={styles.errorText}>{exportError}</p>}
-        </aside>
-      </div>
+        }
+        leftDock={
+          <LeftDock activeTool={activeTool} onSelectTool={setActiveTool} />
+        }
+        toolPanel={
+          <ToolPanel
+            activeTool={activeTool}
+            selectedColor={selectedColor}
+            textControls={textControls}
+            exportError={exportError}
+            onColorSelect={handleColorSelect}
+            onUpload={handleUpload}
+            onTextControlsChange={handleTextControlsChange}
+            onAddText={handleAddText}
+          />
+        }
+        canvasWorkspace={
+          <CanvasWorkspace
+            canvasRef={canvasRef}
+            zoomPercent={zoomPercent}
+            debugInfo={canvasDebugInfo}
+          />
+        }
+        bottomDock={
+          <LayersPanel
+            layers={layers}
+            onSelectLayer={handleSelectLayer}
+            onDeleteLayer={handleDeleteLayer}
+            onMoveLayer={handleMoveLayer}
+          />
+        }
+      />
     </div>
   );
 }

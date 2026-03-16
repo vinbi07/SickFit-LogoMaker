@@ -1,0 +1,63 @@
+.dock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 8px;
+}
+
+.brand {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: #ffffff;
+  background: linear-gradient(145deg, #151f2c, #25374f);
+  margin-bottom: 6px;
+}
+
+.toolButton {
+  width: 56px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  padding: 6px 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  cursor: pointer;
+  color: #3a485a;
+  transition: transform 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.toolButton:hover {
+  background: #eaf0f7;
+  color: #0d1624;
+}
+
+.activeTool {
+  background: #dbe6f2;
+  color: #0d1624;
+}
+
+.shortLabel {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  background: #ffffff;
+  border: 1px solid #d5dde7;
+}
+
+.longLabel {
+  font-size: 0.65rem;
+  text-align: center;
+  line-height: 1.15;
+}
