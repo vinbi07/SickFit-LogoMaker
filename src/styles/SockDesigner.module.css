@@ -64,6 +64,69 @@
   padding-left: 1.1rem;
 }
 
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 20, 34, 0.58);
+  z-index: 30;
+}
+
+.exportModal {
+  width: min(520px, calc(100vw - 2rem));
+  background: #ffffff;
+  border: 1px solid #d6deea;
+  border-radius: 16px;
+  box-shadow: 0 28px 70px rgba(16, 28, 43, 0.28);
+  padding: 1.2rem;
+}
+
+.exportModal h2 {
+  margin: 0 0 0.35rem;
+  color: #112338;
+  font-size: 1.2rem;
+}
+
+.exportModal p {
+  margin: 0;
+  color: #5a6d83;
+}
+
+.modalActions {
+  margin-top: 1rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.65rem;
+}
+
+.modalActions button,
+.modalClose {
+  width: 100%;
+  border: 1px solid #cad4e1;
+  border-radius: 10px;
+  background: #f8fbff;
+  color: #0f243d;
+  padding: 0.7rem 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modalActions button:hover:not(:disabled),
+.modalClose:hover {
+  background: #eef4fc;
+}
+
+.modalActions button:disabled {
+  background: #eef1f5;
+  color: #7a8a9f;
+  cursor: not-allowed;
+}
+
+.modalClose {
+  margin-top: 0.8rem;
+}
+
 @media (max-width: 768px) {
   .disclaimer {
     display: block;

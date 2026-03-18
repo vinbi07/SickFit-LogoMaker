@@ -17,18 +17,11 @@ import { useFabricCanvas } from "../hooks/useFabricCanvas";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useDesignerStore } from "../store/useDesignerStore";
 import type {
-  AIGenerationRequest,
   ExportConfig,
   SockColorKey,
   TextControlsState,
 } from "../types/designer";
-import {
-  createAIMockupJob,
-  isAIMockupEnabled,
-  waitForAIMockupJob,
-} from "../services/mockupGenerationApi";
 import { exportMockup } from "../utils/exportMockup";
-import { extractDesignTexture } from "../utils/fabricTextureExport";
 import { loadImageFromDataUrl } from "../utils/fabricImageLoader";
 import { overlayTemplateUrl, sockImages } from "../utils/sockImages";
 import styles from "../styles/SockDesigner.module.css";
@@ -56,6 +49,7 @@ export function SockDesigner() {
   >("idle");
   const [lastBackgroundUrl, setLastBackgroundUrl] = useState("");
   const [lastBackgroundError, setLastBackgroundError] = useState("");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const canvas = useDesignerStore((state) => state.canvas);
   const selectedColor = useDesignerStore((state) => state.selectedColor);
@@ -69,9 +63,6 @@ export function SockDesigner() {
   const setTextControls = useDesignerStore((state) => state.setTextControls);
   const setIsExporting = useDesignerStore((state) => state.setIsExporting);
   const setExportError = useDesignerStore((state) => state.setExportError);
-  const setAIGenerationState = useDesignerStore(
-    (state) => state.setAIGenerationState,
-  );
 
   const { loadSockBackground } = useFabricCanvas(canvasRef);
   const history = useCanvasHistory(canvas);
@@ -383,69 +374,13 @@ export function SockDesigner() {
     };
   }, [selectedColor]);
 
-  const aiGenerationEnabled = useMemo(() => isAIMockupEnabled(), []);
-
   const downloadButtonLabel = useMemo(() => {
     if (!isExporting) {
-      return aiGenerationEnabled ? "Generate AI Mockup" : "Download Mockup";
-    }
-
-    if (!aiGenerationEnabled) {
-      return "Exporting...";
-    }
-
-    if (aiStatus === "queued") {
-      return "Queued...";
-    }
-
-    if (aiStatus === "running") {
-      return "Generating...";
+      return "Generate Mockup";
     }
 
     return "Exporting...";
-  }, [aiGenerationEnabled, aiStatus, isExporting]);
-
-  const buildAIGenerationRequest =
-    useCallback((): AIGenerationRequest | null => {
-      if (!canvas) {
-        return null;
-      }
-
-      const texturePng = extractDesignTexture(canvas, exportConfig.printArea);
-
-      return {
-        canvasJson: canvas.toDatalessJSON(),
-        canvasSize: {
-          width: canvas.getWidth(),
-          height: canvas.getHeight(),
-        },
-        printArea: exportConfig.printArea,
-        selectedColor,
-        variants: ["studio", "on-foot"],
-        quality: "preview",
-        texturePng,
-      };
-    }, [canvas, exportConfig.printArea, selectedColor]);
-
-  const downloadImageFromUrl = useCallback(
-    async (imageUrl: string) => {
-      const response = await fetch(imageUrl);
-      if (!response.ok) {
-        throw new Error("Unable to download generated mockup image.");
-      }
-
-      const blob = await response.blob();
-      const objectUrl = URL.createObjectURL(blob);
-      const anchor = document.createElement("a");
-      anchor.href = objectUrl;
-      anchor.download = `sock-${selectedColor}-ai-mockup.png`;
-      document.body.appendChild(anchor);
-      anchor.click();
-      document.body.removeChild(anchor);
-      URL.revokeObjectURL(objectUrl);
-    },
-    [selectedColor],
-  );
+  }, [isExporting]);
 
   useEffect(() => {
     if (!canvas || !snapEnabled) {
@@ -611,7 +546,7 @@ export function SockDesigner() {
     [canvas, history],
   );
 
-  const handleDownload = useCallback(async () => {
+  const handleRegularExport = useCallback(async () => {
     if (!canvas) {
       addToast("Canvas not ready yet. Please try again.", "error");
       return;
@@ -621,52 +556,8 @@ export function SockDesigner() {
     setIsExporting(true);
 
     try {
-      if (aiGenerationEnabled) {
-        setAIGenerationState({
-          aiJobId: null,
-          aiStatus: "queued",
-          aiStatusMessage: "Submitting design for AI generation...",
-        });
-
-        const request = buildAIGenerationRequest();
-        if (!request) {
-          throw new Error("Unable to build AI generation request.");
-        }
-
-        const createdJob = await createAIMockupJob(request);
-        setAIGenerationState({
-          aiJobId: createdJob.id,
-          aiStatus: createdJob.status,
-          aiStatusMessage: "AI mockup request accepted.",
-        });
-
-        const completedJob = await waitForAIMockupJob(createdJob.id);
-        setAIGenerationState({
-          aiStatus: completedJob.status,
-          aiStatusMessage:
-            completedJob.status === "completed"
-              ? "AI mockup generated."
-              : (completedJob.errorMessage ?? "AI mockup generation failed."),
-        });
-
-        if (completedJob.status === "completed") {
-          const firstResult = completedJob.results?.[0];
-          if (!firstResult?.imageUrl) {
-            throw new Error("AI job completed without any generated images.");
-          }
-
-          await downloadImageFromUrl(firstResult.imageUrl);
-          addToast("AI mockup generated and downloaded.", "success");
-          window.location.href = exportConfig.redirectUrl;
-          return;
-        }
-
-        throw new Error(
-          completedJob.errorMessage ?? "AI mockup generation failed.",
-        );
-      }
-
       await exportMockup(canvas, exportConfig);
+      window.location.href = exportConfig.redirectUrl;
     } catch (error) {
       const fallbackMessage =
         error instanceof Error
@@ -674,47 +565,37 @@ export function SockDesigner() {
           : "Download failed. One or more images may block cross-origin export.";
 
       setExportError(fallbackMessage);
-
-      if (aiGenerationEnabled) {
-        setAIGenerationState({
-          aiStatus: "failed",
-          aiStatusMessage: fallbackMessage,
-        });
-        addToast(
-          "AI generation failed. Falling back to static mockup.",
-          "error",
-        );
-
-        try {
-          await exportMockup(canvas, exportConfig);
-          addToast("Static mockup downloaded.", "info");
-          return;
-        } catch {
-          addToast(
-            "Download failed. Please verify image source permissions.",
-            "error",
-          );
-        }
-      } else {
-        addToast(
-          "Download failed. Please verify image source permissions.",
-          "error",
-        );
-      }
+      addToast(
+        "Download failed. Please verify image source permissions.",
+        "error",
+      );
     } finally {
       setIsExporting(false);
     }
   }, [
     addToast,
-    aiGenerationEnabled,
-    buildAIGenerationRequest,
     canvas,
-    downloadImageFromUrl,
     exportConfig,
-    setAIGenerationState,
     setExportError,
     setIsExporting,
   ]);
+
+  const handleDownload = useCallback(() => {
+    if (isExporting) {
+      return;
+    }
+
+    setIsExportModalOpen(true);
+  }, [isExporting]);
+
+  const handleChooseRegularExport = useCallback(() => {
+    setIsExportModalOpen(false);
+    void handleRegularExport();
+  }, [handleRegularExport]);
+
+  const handleChooseAIGeneration = useCallback(() => {
+    addToast("AI Generation is coming soon.", "info");
+  }, [addToast]);
 
   const canvasDebugInfo = useMemo<CanvasDebugInfo>(() => {
     void layerRevision;
@@ -867,6 +748,42 @@ export function SockDesigner() {
           />
         }
       />
+
+      {isExportModalOpen ? (
+        <div
+          className={styles.modalOverlay}
+          role="presentation"
+          onClick={() => setIsExportModalOpen(false)}
+        >
+          <div
+            className={styles.exportModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="export-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="export-modal-title">Choose Export Type</h2>
+            <p>Export your current design now, or wait for AI generation.</p>
+
+            <div className={styles.modalActions}>
+              <button type="button" onClick={handleChooseRegularExport}>
+                Regular Export
+              </button>
+              <button type="button" disabled onClick={handleChooseAIGeneration}>
+                AI Generation (Coming Soon)
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => setIsExportModalOpen(false)}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
