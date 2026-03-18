@@ -572,13 +572,7 @@ export function SockDesigner() {
     } finally {
       setIsExporting(false);
     }
-  }, [
-    addToast,
-    canvas,
-    exportConfig,
-    setExportError,
-    setIsExporting,
-  ]);
+  }, [addToast, canvas, exportConfig, setExportError, setIsExporting]);
 
   const handleDownload = useCallback(() => {
     if (isExporting) {
