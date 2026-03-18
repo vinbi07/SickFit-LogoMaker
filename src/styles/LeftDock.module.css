@@ -4,6 +4,7 @@
   align-items: center;
   gap: 8px;
   padding: 10px 8px;
+  height: 100%;
 }
 
 .brand {
@@ -66,4 +67,26 @@
   font-size: 0.65rem;
   text-align: center;
   line-height: 1.15;
+}
+
+.spacer {
+  flex: 1;
+}
+
+.tutorialButton {
+  width: 42px;
+  height: 42px;
+  border: 1px solid #cad5e2;
+  border-radius: 12px;
+  background: #f4f7fb;
+  color: #11263e;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 140ms ease, background-color 140ms ease;
+}
+
+.tutorialButton:hover {
+  background: #e8eff8;
+  transform: translateY(-1px);
 }

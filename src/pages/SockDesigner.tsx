@@ -10,9 +10,12 @@ import { LayersPanel } from "../components/Layout/LayersPanel";
 import { ToolPanel } from "../components/Layout/ToolPanel";
 import { TopToolbar } from "../components/Layout/TopToolbar";
 import { ToastStack, type ToastMessage } from "../components/Toast/ToastStack";
+import { TutorialOverlay } from "../components/Tutorial/TutorialOverlay";
+import { TutorialPromptModal } from "../components/Tutorial/TutorialPromptModal";
 import { useCanvasHistory } from "../hooks/useCanvasHistory";
 import { useCanvasInteractions } from "../hooks/useCanvasInteractions";
 import { useCanvasSelectionSync } from "../hooks/useCanvasSelectionSync";
+import { useEditorTutorial } from "../hooks/useEditorTutorial";
 import { useFabricCanvas } from "../hooks/useFabricCanvas";
 import { useKeyboardShortcuts } from "../hooks/useKeyboardShortcuts";
 import { useDesignerStore } from "../store/useDesignerStore";
@@ -21,6 +24,7 @@ import type {
   SockColorKey,
   TextControlsState,
 } from "../types/designer";
+import type { TutorialStep } from "../types/tutorial";
 import {
   downloadMockupDataUrl,
   renderMockupPreview,
@@ -56,6 +60,9 @@ export function SockDesigner() {
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
   const [exportFileNameBase, setExportFileNameBase] = useState("sock-custom");
+  const [allowTutorialAutostart, setAllowTutorialAutostart] = useState(false);
+  const [stepInteractionDone, setStepInteractionDone] = useState(false);
+  const completionToastShownRef = useRef(false);
 
   const canvas = useDesignerStore((state) => state.canvas);
   const selectedColor = useDesignerStore((state) => state.selectedColor);
@@ -73,6 +80,100 @@ export function SockDesigner() {
   const { loadSockBackground } = useFabricCanvas(canvasRef);
   const history = useCanvasHistory(canvas);
 
+  const tutorialSteps = useMemo<TutorialStep[]>(() => {
+    const coreSteps: TutorialStep[] = [
+      {
+        id: "welcome-toolbar",
+        title: "Toolbar essentials",
+        description:
+          "This top toolbar gives you fast undo/redo, delete, and quick canvas controls.",
+        targetSelector: '[data-tutorial="toolbar-history-controls"]',
+        placement: "bottom",
+      },
+      {
+        id: "tools-panel",
+        title: "Choose a design tool",
+        description:
+          "Use the left dock to switch between upload, text, and color workflows.",
+        actionHint: "Try clicking any tool in the dock, then continue.",
+        targetSelector: '[data-tutorial="left-dock"]',
+        placement: "right",
+        requiresTargetClick: true,
+        spotlightOffsetY: 0,
+        spotlightPadding: 0, // make highlight box larger around target
+      },
+      {
+        id: "canvas-stage",
+        title: "Work on the canvas",
+        description:
+          "Drag, resize, and position artwork directly on the mockup canvas.",
+        actionHint:
+          "Tip: Hold Alt and drag to pan. Use your mouse wheel to zoom.",
+        targetSelector: '[data-tutorial="canvas-stage"]',
+        placement: "top",
+      },
+      {
+        id: "layers-panel",
+        title: "Manage layers",
+        description:
+          "Select layers, move them up or down, or remove items from your composition.",
+        targetSelector: '[data-tutorial="layers-panel"]',
+        placement: "top",
+      },
+      {
+        id: "settings-panel",
+        title: "Adjust settings",
+        description:
+          "Use these top toolbar controls to tune zoom and snap behavior while editing.",
+        targetSelector: '[data-tutorial="toolbar-zoom-controls"]',
+        placement: "bottom",
+      },
+      {
+        id: "export-action",
+        title: "Export your mockup",
+        description:
+          "When your design is ready, generate and download a production-ready mockup.",
+        actionHint:
+          "Click Generate Mockup when you are ready to preview your result.",
+        targetSelector: '[data-tutorial="toolbar-export"]',
+        placement: "bottom",
+      },
+    ];
+
+    if (activeTool === "text") {
+      coreSteps.push({
+        id: "advanced-text-tip",
+        title: "Advanced tip: text styling",
+        description:
+          "When a text layer is selected, the toolbar exposes font, size, alignment, and style controls.",
+        targetSelector: '[data-tutorial="toolbar-text-settings"]',
+        placement: "bottom",
+      });
+    }
+
+    return coreSteps;
+  }, [activeTool]);
+
+  const {
+    isPromptOpen,
+    isTutorialOpen,
+    hasCompletedTutorial,
+    currentStepIndex,
+    startTutorial,
+    skipFirstVisitPrompt,
+    closeTutorial,
+    completeCurrentStep,
+    goNext,
+    goBack,
+    skipTutorial,
+    replayTutorial,
+  } = useEditorTutorial({
+    stepCount: tutorialSteps.length,
+    allowAutostart: allowTutorialAutostart,
+  });
+
+  const currentTutorialStep = tutorialSteps[currentStepIndex] ?? null;
+
   const addToast = useCallback((text: string, type: ToastMessage["type"]) => {
     const nextId = ++toastIdRef.current;
     setToasts((prev) => [...prev, { id: nextId, text, type }]);
@@ -84,6 +185,69 @@ export function SockDesigner() {
   const dismissToast = useCallback((id: number) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    const query = window.matchMedia("(min-width: 768px)");
+    const sync = () => setAllowTutorialAutostart(query.matches);
+    sync();
+
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
+
+  useEffect(() => {
+    if (!hasCompletedTutorial || completionToastShownRef.current) {
+      return;
+    }
+
+    completionToastShownRef.current = true;
+    addToast(
+      "Tutorial completed. You can replay it from the Tutorial button.",
+      "success",
+    );
+  }, [addToast, hasCompletedTutorial]);
+
+  useEffect(() => {
+    if (hasCompletedTutorial) {
+      return;
+    }
+
+    completionToastShownRef.current = false;
+  }, [hasCompletedTutorial]);
+
+  useEffect(() => {
+    setStepInteractionDone(false);
+  }, [currentStepIndex, currentTutorialStep?.id]);
+
+  useEffect(() => {
+    if (!isTutorialOpen || !currentTutorialStep?.requiresTargetClick) {
+      return;
+    }
+
+    const target = document.querySelector(currentTutorialStep.targetSelector);
+    if (!(target instanceof HTMLElement)) {
+      return;
+    }
+
+    const onClick = () => setStepInteractionDone(true);
+    target.addEventListener("click", onClick, { capture: true });
+    return () =>
+      target.removeEventListener("click", onClick, { capture: true });
+  }, [currentTutorialStep, isTutorialOpen]);
+
+  useEffect(() => {
+    if (!isTutorialOpen) {
+      return;
+    }
+
+    if (isExportModalOpen || isPreviewModalOpen) {
+      closeTutorial();
+    }
+  }, [closeTutorial, isExportModalOpen, isPreviewModalOpen, isTutorialOpen]);
 
   useCanvasInteractions(canvas);
   useCanvasSelectionSync(canvas);
@@ -715,6 +879,53 @@ export function SockDesigner() {
     zoomPercent,
   ]);
 
+  const handleOpenTutorial = useCallback(() => {
+    if (isTutorialOpen) {
+      closeTutorial();
+      return;
+    }
+
+    if (hasCompletedTutorial) {
+      replayTutorial();
+      return;
+    }
+
+    startTutorial();
+  }, [
+    closeTutorial,
+    hasCompletedTutorial,
+    isTutorialOpen,
+    replayTutorial,
+    startTutorial,
+  ]);
+
+  const handleTutorialNext = useCallback(() => {
+    if (!currentTutorialStep) {
+      return;
+    }
+
+    const isLastStep = currentStepIndex >= tutorialSteps.length - 1;
+    completeCurrentStep(currentTutorialStep.id);
+    goNext();
+    if (isLastStep) {
+      closeTutorial();
+    }
+  }, [
+    closeTutorial,
+    completeCurrentStep,
+    currentStepIndex,
+    currentTutorialStep,
+    goNext,
+    tutorialSteps.length,
+  ]);
+
+  const handleTutorialReplayFromPrompt = useCallback(() => {
+    startTutorial();
+  }, [startTutorial]);
+
+  const isNextDisabled =
+    Boolean(currentTutorialStep?.requiresTargetClick) && !stepInteractionDone;
+
   return (
     <div className={styles.page}>
       <ToastStack toasts={toasts} onDismiss={dismissToast} />
@@ -745,7 +956,11 @@ export function SockDesigner() {
           />
         }
         leftDock={
-          <LeftDock activeTool={activeTool} onSelectTool={setActiveTool} />
+          <LeftDock
+            activeTool={activeTool}
+            onSelectTool={setActiveTool}
+            onOpenTutorial={handleOpenTutorial}
+          />
         }
         toolPanel={
           <ToolPanel
@@ -885,6 +1100,26 @@ export function SockDesigner() {
             </button>
           </div>
         </div>
+      ) : null}
+
+      {isPromptOpen ? (
+        <TutorialPromptModal
+          onStart={handleTutorialReplayFromPrompt}
+          onSkip={skipFirstVisitPrompt}
+        />
+      ) : null}
+
+      {isTutorialOpen && currentTutorialStep ? (
+        <TutorialOverlay
+          step={currentTutorialStep}
+          stepNumber={Math.min(currentStepIndex + 1, tutorialSteps.length)}
+          totalSteps={tutorialSteps.length}
+          nextDisabled={isNextDisabled}
+          onBack={goBack}
+          onNext={handleTutorialNext}
+          onSkip={skipTutorial}
+          onClose={closeTutorial}
+        />
       ) : null}
     </div>
   );

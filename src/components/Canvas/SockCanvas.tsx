@@ -6,5 +6,11 @@ type SockCanvasProps = {
 };
 
 export function SockCanvas({ canvasRef }: SockCanvasProps) {
-  return <canvas ref={canvasRef} className={styles.mainCanvas} />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className={styles.mainCanvas}
+      data-tutorial="drawing-canvas"
+    />
+  );
 }

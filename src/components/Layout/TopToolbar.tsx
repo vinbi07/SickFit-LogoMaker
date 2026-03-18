@@ -74,49 +74,82 @@ export function TopToolbar({
   };
 
   return (
-    <div className={styles.toolbar}>
-      <div className={styles.brandGroup}>
+    <div className={styles.toolbar} data-tutorial="top-toolbar">
+      <div className={styles.brandGroup} data-tutorial="toolbar-brand">
         <span className={styles.brandTitle}>SickFit</span>
         <span className={styles.brandSubtle}>Custom Sock Editor</span>
       </div>
 
-      <div className={styles.commandGroup}>
-        <button type="button" onClick={onUndo} disabled={!canUndo}>
+      <div
+        className={styles.commandGroup}
+        data-tutorial="toolbar-history-controls"
+      >
+        <button
+          type="button"
+          onClick={onUndo}
+          disabled={!canUndo}
+          data-tutorial="toolbar-undo"
+        >
           Undo
         </button>
-        <button type="button" onClick={onRedo} disabled={!canRedo}>
+        <button
+          type="button"
+          onClick={onRedo}
+          disabled={!canRedo}
+          data-tutorial="toolbar-redo"
+        >
           Redo
         </button>
-        <button type="button" onClick={onDeleteSelected}>
+        <button
+          type="button"
+          onClick={onDeleteSelected}
+          data-tutorial="toolbar-delete"
+        >
           Delete
         </button>
       </div>
 
-      <div className={styles.commandGroup}>
-        <button type="button" onClick={onZoomOut}>
+      <div
+        className={styles.commandGroup}
+        data-tutorial="toolbar-zoom-controls"
+      >
+        <button
+          type="button"
+          onClick={onZoomOut}
+          data-tutorial="toolbar-zoom-out"
+        >
           -
         </button>
         <button
           type="button"
           className={styles.zoomReadout}
           onClick={onZoomReset}
+          data-tutorial="toolbar-zoom-readout"
         >
           {zoomPercent}%
         </button>
-        <button type="button" onClick={onZoomIn}>
+        <button
+          type="button"
+          onClick={onZoomIn}
+          data-tutorial="toolbar-zoom-in"
+        >
           +
         </button>
         <button
           type="button"
           className={snapEnabled ? styles.toggleActive : ""}
           onClick={onToggleSnap}
+          data-tutorial="toolbar-snap-toggle"
         >
           Snap
         </button>
       </div>
 
       {isTextSelected ? (
-        <div className={styles.contextGroup}>
+        <div
+          className={styles.contextGroup}
+          data-tutorial="toolbar-text-settings"
+        >
           <select
             aria-label="Font family"
             value={textControls.fontFamily}
@@ -222,6 +255,7 @@ export function TopToolbar({
         className={styles.downloadButton}
         disabled={isExporting}
         onClick={onDownload}
+        data-tutorial="toolbar-export"
       >
         {isExporting
           ? (downloadButtonLabel ?? "Exporting...")

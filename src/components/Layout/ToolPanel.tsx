@@ -36,12 +36,15 @@ export function ToolPanel({
   onAddText,
 }: ToolPanelProps) {
   return (
-    <section className={styles.panel}>
-      <div className={styles.header}>
+    <section className={styles.panel} data-tutorial="tool-panel">
+      <div className={styles.header} data-tutorial="tool-panel-header">
         <h2>Design Tools</h2>
       </div>
 
-      <div className={styles.content}>
+      <div
+        className={styles.content}
+        data-tutorial={`tool-panel-content-${activeTool}`}
+      >
         {activeTool === "upload" && <UploadImage onUpload={onUpload} />}
         {activeTool === "text" && (
           <TextControls

@@ -48,7 +48,8 @@ app.get('/health', (_req, res) => {
 
 app.use('/api', mockupsRouter);
 
-app.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.use((err: unknown, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+  void next;
   logger.error('server.unhandled_error', {}, err);
   res.status(500).json({ error: 'Internal server error.' });
 });

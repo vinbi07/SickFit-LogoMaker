@@ -11,6 +11,7 @@ export type EditorToolKey =
 type LeftDockProps = {
   activeTool: EditorToolKey;
   onSelectTool: (tool: EditorToolKey) => void;
+  onOpenTutorial: () => void;
 };
 
 const tools: { key: EditorToolKey; label: string; shortLabel: string }[] = [
@@ -22,10 +23,18 @@ const tools: { key: EditorToolKey; label: string; shortLabel: string }[] = [
   { key: "sockStyle", label: "Sock Style", shortLabel: "Sk" },
 ];
 
-export function LeftDock({ activeTool, onSelectTool }: LeftDockProps) {
+export function LeftDock({
+  activeTool,
+  onSelectTool,
+  onOpenTutorial,
+}: LeftDockProps) {
   return (
-    <nav className={styles.dock} aria-label="Design tools">
-      <div className={styles.brand}>
+    <nav
+      className={styles.dock}
+      aria-label="Design tools"
+      data-tutorial="left-dock"
+    >
+      <div className={styles.brand} data-tutorial="left-dock-brand">
         <img
           src="https://cdn.shopify.com/s/files/1/0582/5324/6628/files/SickFit_-_RED.png?v=1736220882"
           alt="SickFit"
@@ -41,12 +50,25 @@ export function LeftDock({ activeTool, onSelectTool }: LeftDockProps) {
             onClick={() => onSelectTool(tool.key)}
             title={tool.label}
             aria-label={tool.label}
+            data-tutorial={`tool-${tool.key}`}
           >
             <span className={styles.shortLabel}>{tool.shortLabel}</span>
             <span className={styles.longLabel}>{tool.label}</span>
           </button>
         );
       })}
+
+      <div className={styles.spacer} />
+      <button
+        type="button"
+        className={styles.tutorialButton}
+        onClick={onOpenTutorial}
+        data-tutorial="left-dock-tutorial"
+        aria-label="Open tutorial"
+        title="Tutorial"
+      >
+        ?
+      </button>
     </nav>
   );
 }

@@ -37,8 +37,8 @@ export function CanvasWorkspace({
   zoomPercent,
 }: CanvasWorkspaceProps) {
   return (
-    <section className={styles.workspace}>
-      <div className={styles.stage}>
+    <section className={styles.workspace} data-tutorial="canvas-workspace">
+      <div className={styles.stage} data-tutorial="canvas-stage">
         {/*
         <aside className={styles.debugOverlay} aria-live="polite">
           <strong>Canvas Debug</strong>

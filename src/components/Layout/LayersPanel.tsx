@@ -21,7 +21,11 @@ export function LayersPanel({
   onMoveLayer,
 }: LayersPanelProps) {
   return (
-    <section className={styles.panel} aria-label="Layers panel">
+    <section
+      className={styles.panel}
+      aria-label="Layers panel"
+      data-tutorial="layers-panel"
+    >
       <div className={styles.headerRow}>
         <h2>Layers</h2>
       </div>
