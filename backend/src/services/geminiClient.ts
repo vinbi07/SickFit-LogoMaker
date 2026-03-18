@@ -32,7 +32,7 @@ export async function generateMockupImage(
   variant: AIGenerationVariant,
   apiKey: string,
 ): Promise<GeminiImageResult> {
-  const model = process.env.GEMINI_MODEL ?? 'gemini-2.0-flash';
+  const model = process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-image-preview';
   const startedAt = Date.now();
 
   const prompt = buildPrompt(variant);
@@ -76,7 +76,7 @@ export async function generateMockupImage(
         body: JSON.stringify({
           contents: [{ parts }],
           generationConfig: {
-            responseModalities: ['IMAGE', 'TEXT'],
+            responseModalities: ['IMAGE'],
           },
         }),
         signal: controller.signal,

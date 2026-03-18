@@ -66,7 +66,7 @@ app.listen(port, () => {
     port,
     corsOrigin,
     baseUrl: process.env.BASE_URL ?? null,
-    geminiModel: process.env.GEMINI_MODEL ?? 'gemini-2.0-flash',
+    geminiModel: process.env.GEMINI_MODEL ?? 'gemini-3.1-flash-image-preview',
     geminiApiKeyConfigured: Boolean(process.env.GEMINI_API_KEY),
   });
 });
