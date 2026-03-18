@@ -21,7 +21,10 @@ import type {
   SockColorKey,
   TextControlsState,
 } from "../types/designer";
-import { exportMockup } from "../utils/exportMockup";
+import {
+  downloadMockupDataUrl,
+  renderMockupPreview,
+} from "../utils/exportMockup";
 import { loadImageFromDataUrl } from "../utils/fabricImageLoader";
 import { overlayTemplateUrl, sockImages } from "../utils/sockImages";
 import styles from "../styles/SockDesigner.module.css";
@@ -50,6 +53,9 @@ export function SockDesigner() {
   const [lastBackgroundUrl, setLastBackgroundUrl] = useState("");
   const [lastBackgroundError, setLastBackgroundError] = useState("");
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
+  const [previewDataUrl, setPreviewDataUrl] = useState<string | null>(null);
+  const [exportFileNameBase, setExportFileNameBase] = useState("sock-custom");
 
   const canvas = useDesignerStore((state) => state.canvas);
   const selectedColor = useDesignerStore((state) => state.selectedColor);
@@ -165,7 +171,7 @@ export function SockDesigner() {
         setLastBackgroundUrl(sockImages[color]?.right ?? "");
         setLastBackgroundError("");
         setSelectedColor(color);
-        await loadSockBackground(color, true);
+        await loadSockBackground(color, false);
         setBackgroundLoadStatus("ready");
         history.pushSnapshot();
         setLayerRevision((value) => value + 1);
@@ -382,6 +388,18 @@ export function SockDesigner() {
     return "Exporting...";
   }, [isExporting]);
 
+  const normalizeFileName = useCallback((name: string) => {
+    const normalized = name
+      .trim()
+      .replace(/\.png$/i, "")
+      .replace(/[\\/:*?"<>|]/g, "-");
+    if (!normalized) {
+      return "mockup-export.png";
+    }
+
+    return `${normalized}.png`;
+  }, []);
+
   useEffect(() => {
     if (!canvas || !snapEnabled) {
       return;
@@ -554,10 +572,13 @@ export function SockDesigner() {
 
     setExportError(null);
     setIsExporting(true);
+    setPreviewDataUrl(null);
+    setIsPreviewModalOpen(true);
+    setExportFileNameBase(exportConfig.fileName.replace(/\.png$/i, ""));
 
     try {
-      await exportMockup(canvas, exportConfig);
-      window.location.href = exportConfig.redirectUrl;
+      const dataUrl = await renderMockupPreview(canvas, exportConfig);
+      setPreviewDataUrl(dataUrl);
     } catch (error) {
       const fallbackMessage =
         error instanceof Error
@@ -565,6 +586,7 @@ export function SockDesigner() {
           : "Download failed. One or more images may block cross-origin export.";
 
       setExportError(fallbackMessage);
+      setIsPreviewModalOpen(false);
       addToast(
         "Download failed. Please verify image source permissions.",
         "error",
@@ -590,6 +612,17 @@ export function SockDesigner() {
   const handleChooseAIGeneration = useCallback(() => {
     addToast("AI Generation is coming soon.", "info");
   }, [addToast]);
+
+  const handleDownloadPreview = useCallback(() => {
+    if (!previewDataUrl) {
+      return;
+    }
+
+    const fileName = normalizeFileName(exportFileNameBase);
+    downloadMockupDataUrl(previewDataUrl, fileName);
+    setIsPreviewModalOpen(false);
+    addToast("Mockup downloaded.", "success");
+  }, [addToast, exportFileNameBase, normalizeFileName, previewDataUrl]);
 
   const canvasDebugInfo = useMemo<CanvasDebugInfo>(() => {
     void layerRevision;
@@ -774,6 +807,81 @@ export function SockDesigner() {
               onClick={() => setIsExportModalOpen(false)}
             >
               Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
+
+      {isPreviewModalOpen ? (
+        <div
+          className={styles.modalOverlay}
+          role="presentation"
+          onClick={() => {
+            if (!isExporting) {
+              setIsPreviewModalOpen(false);
+            }
+          }}
+        >
+          <div
+            className={styles.previewModal}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="preview-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h2 id="preview-modal-title">Mockup Preview</h2>
+            <p>
+              {isExporting
+                ? "Rendering your mockup preview..."
+                : "Review the preview, choose a filename, then download."}
+            </p>
+
+            <div className={styles.previewViewport}>
+              {previewDataUrl ? (
+                <img
+                  src={previewDataUrl}
+                  alt="Generated mockup preview"
+                  className={styles.previewImage}
+                />
+              ) : (
+                <div className={styles.previewPlaceholder}>
+                  Preparing preview...
+                </div>
+              )}
+            </div>
+
+            <label className={styles.fileNameField}>
+              File name
+              <div className={styles.fileNameRow}>
+                <input
+                  type="text"
+                  value={exportFileNameBase}
+                  onChange={(event) =>
+                    setExportFileNameBase(event.target.value)
+                  }
+                  placeholder="sock-custom"
+                />
+                <span className={styles.fileExt}>.png</span>
+              </div>
+            </label>
+
+            <div className={styles.modalActions}>
+              <button
+                type="button"
+                disabled={!previewDataUrl || isExporting}
+                onClick={handleDownloadPreview}
+              >
+                Download PNG
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => setIsPreviewModalOpen(false)}
+              disabled={isExporting}
+            >
+              Close
             </button>
           </div>
         </div>

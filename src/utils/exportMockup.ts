@@ -34,7 +34,10 @@ function restoreCanvasState(canvas: fabric.Canvas, state: OriginalCanvasState): 
   canvas.requestRenderAll();
 }
 
-export async function exportMockup(canvas: fabric.Canvas, config: ExportConfig): Promise<void> {
+export async function renderMockupPreview(
+  canvas: fabric.Canvas,
+  config: ExportConfig,
+): Promise<string> {
   const original = getOriginalCanvasState(canvas);
 
   const userObjects: UserObjectState[] = canvas
@@ -111,12 +114,7 @@ export async function exportMockup(canvas: fabric.Canvas, config: ExportConfig):
     canvas.requestRenderAll();
 
     const dataURL = canvas.toDataURL({ format: 'png', quality: 1 });
-    const anchor = document.createElement('a');
-    anchor.href = dataURL;
-    anchor.download = config.fileName;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
+    return dataURL;
   } finally {
     if (bgImg) {
       canvas.remove(bgImg);
@@ -136,6 +134,13 @@ export async function exportMockup(canvas: fabric.Canvas, config: ExportConfig):
 
     restoreCanvasState(canvas, original);
   }
+}
 
-  window.location.href = config.redirectUrl;
+export function downloadMockupDataUrl(dataURL: string, fileName: string): void {
+  const anchor = document.createElement('a');
+  anchor.href = dataURL;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
 }

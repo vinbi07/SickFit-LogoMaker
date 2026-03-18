@@ -82,7 +82,22 @@
   padding: 1.2rem;
 }
 
+.previewModal {
+  width: min(760px, calc(100vw - 2rem));
+  background: #ffffff;
+  border: 1px solid #d6deea;
+  border-radius: 16px;
+  box-shadow: 0 28px 70px rgba(16, 28, 43, 0.28);
+  padding: 1.2rem;
+}
+
 .exportModal h2 {
+  margin: 0 0 0.35rem;
+  color: #112338;
+  font-size: 1.2rem;
+}
+
+.previewModal h2 {
   margin: 0 0 0.35rem;
   color: #112338;
   font-size: 1.2rem;
@@ -91,6 +106,76 @@
 .exportModal p {
   margin: 0;
   color: #5a6d83;
+}
+
+.previewModal p {
+  margin: 0;
+  color: #5a6d83;
+}
+
+.previewViewport {
+  margin-top: 1rem;
+  border: 1px solid #d7e0ec;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #f8fbff, #eef4fb);
+  min-height: 260px;
+  max-height: 420px;
+  overflow: auto;
+  display: grid;
+  place-items: center;
+  padding: 0.8rem;
+}
+
+.previewImage {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  border-radius: 8px;
+  box-shadow: 0 8px 22px rgba(17, 29, 44, 0.2);
+}
+
+.previewPlaceholder {
+  color: #607185;
+  font-weight: 600;
+}
+
+.fileNameField {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+  color: #24384f;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.fileNameRow {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.fileNameField input {
+  border: 1px solid #cad4e1;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font: inherit;
+  color: #0f243d;
+  background: #ffffff;
+}
+
+.fileNameField input:focus {
+  outline: 2px solid #9db8d9;
+  outline-offset: 0;
+}
+
+.fileExt {
+  border: 1px solid #cad4e1;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  background: #f2f6fb;
+  color: #3e5167;
+  font-weight: 600;
 }
 
 .modalActions {
